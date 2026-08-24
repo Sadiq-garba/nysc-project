@@ -209,21 +209,65 @@
 
     // Listen for new questions in real time
     supabaseClient
-      .channel("questions-live")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "questions"
-        },
-        (payload) => {
+  .channel("questions-live")
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "questions"
+    },
+    (payload) => {
 
-          loadQuestions();
+      console.log("New question received:", payload.new);
 
-        }
-      )
-      .subscribe();
+      // Add the new question directly to the page
+      addQuestion(payload.new);
+
+    }
+  )
+  .subscribe((status) => {
+    console.log("Realtime status:", status);
+  });
+
+
+// Add a single new question to the page
+function addQuestion(item) {
+
+  // Remove "No questions..." message if it exists
+  const emptyMessage =
+    questionsContainer.querySelector(".empty");
+
+  if (emptyMessage) {
+    emptyMessage.remove();
+  }
+
+  const questionElement =
+    document.createElement("div");
+
+  questionElement.className = "question";
+
+  const questionText =
+    document.createElement("div");
+
+  questionText.className = "question-text";
+
+  questionText.textContent = item.question;
+
+  const time =
+    document.createElement("div");
+
+  time.className = "time";
+
+  time.textContent =
+    new Date(item.created_at).toLocaleString();
+
+  questionElement.appendChild(questionText);
+  questionElement.appendChild(time);
+
+  // Put newest question at the top
+  questionsContainer.prepend(questionElement);
+}
 
   </script>
 
