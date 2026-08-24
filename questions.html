@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Live Questions</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 30px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #666;
+    }
+
+    .questions {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .question {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,.05);
+    }
+
+    .question-text {
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .time {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 50px;
+      color: #777;
+    }
+
+    .new-question {
+      display: block;
+      width: fit-content;
+      margin: 30px auto;
+      padding: 12px 20px;
+      background: #111;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="container">
+
+    <header>
+
+      <h1>Anonymous Questions</h1>
+
+      <p class="subtitle">
+        Questions submitted by participants
+      </p>
+
+    </header>
+
+    <div id="questions" class="questions">
+
+      <div class="empty">
+        Loading questions...
+      </div>
+
+    </div>
+
+    <a href="index.html" class="new-question">
+      Ask a Question
+    </a>
+
+  </div>
+
+
+  <script>
+
+    // Replace these with your Supabase credentials
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    const questionsContainer =
+      document.getElementById("questions");
+
+
+    async function loadQuestions() {
+
+      const { data, error } = await supabaseClient
+        .from("questions")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        });
+
+      if (error) {
+
+        console.error(error);
+
+        questionsContainer.innerHTML = `
+          <div class="empty">
+            Failed to load questions.
+          </div>
+        `;
+
+        return;
+      }
+
+      displayQuestions(data);
+    }
+
+
+    function displayQuestions(questions) {
+
+      if (!questions || questions.length === 0) {
+
+        questionsContainer.innerHTML = `
+          <div class="empty">
+            No questions have been submitted yet.
+          </div>
+        `;
+
+        return;
+      }
+
+      questionsContainer.innerHTML = "";
+
+      questions.forEach((item) => {
+
+        const questionElement =
+          document.createElement("div");
+
+        questionElement.className = "question";
+
+        const questionText =
+          document.createElement("div");
+
+        questionText.className = "question-text";
+
+        // textContent prevents submitted HTML from executing
+        questionText.textContent = item.question;
+
+        const time =
+          document.createElement("div");
+
+        time.className = "time";
+
+        time.textContent =
+          new Date(item.created_at).toLocaleString();
+
+        questionElement.appendChild(questionText);
+        questionElement.appendChild(time);
+
+        questionsContainer.appendChild(questionElement);
+
+      });
+    }
+
+
+    // Load existing questions
+    loadQuestions();
+
+
+    // Listen for new questions in real time
+    supabaseClient
+      .channel("questions-live")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "questions"
+        },
+        (payload) => {
+
+          loadQuestions();
+
+        }
+      )
+      .subscribe();
+
+  </script>
+
+</body>
+</html>
