@@ -204,7 +204,9 @@
 
 
     // Load existing questions
-    loadQuestions();
+   setInterval(() => {
+  loadQuestions();
+}, 2000);
 
 
     // Listen for new questions in real time
